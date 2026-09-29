@@ -1,4 +1,4 @@
-executable(
+rawwin = executable(
   'rawwin',
   'main.c',
   install: true,
