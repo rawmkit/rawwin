@@ -1,0 +1,48 @@
+rawwin(1)
+
+# NAME
+
+rawwin - interactively select an admitted rawm client
+
+# SYNOPSIS
+
+*rawwin*
+
+*rawwin -v*
+
+# DESCRIPTION
+
+*rawwin* is a stateless composition client for interactive managed-window
+selection. It obtains rawm's authoritative admitted-client inventory by running
+*rawctl clients*, presents those clients through *rawmenu*(1), then requests
+focus of the selected XID with *rawctl focus-client*.
+
+rawwin does not enumerate the X window tree, read *\_NET\_CLIENT\_LIST*, send
+*\_NET\_ACTIVE\_WINDOW*, or otherwise reconstruct rawm's client authority.
+rawm remains responsible for admitting clients and applying focus; rawmenu
+remains responsible for selector presentation.
+
+If a selected client disappears while the menu is open, the final *rawctl*
+operation fails and rawwin exits unsuccessfully.
+
+# OPTIONS
+
+*-v*, *--version*
+	Print the rawwin version and exit.
+
+*-h*, *--help*
+	Print usage and exit.
+
+# EXIT STATUS
+
+0
+	A client was selected and rawm confirmed the requested focus.
+
+1
+	The inventory could not be obtained or parsed, no clients were admitted,
+	the menu was cancelled or failed, the selection was malformed, or rawm
+	rejected the final focus request.
+
+# SEE ALSO
+
+*rawctl*(1), *rawmenu*(1), *rawm*(1)
