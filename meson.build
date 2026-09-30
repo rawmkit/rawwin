@@ -2,6 +2,7 @@ project(
   'rawwin',
   'c',
   version: '0.1.0',
+  license: 'MIT',
   meson_version: '>=1.6.0',
   default_options: ['c_std=c99', 'warning_level=3'],
 )
@@ -12,3 +13,7 @@ add_project_arguments('-DVERSION="' + meson.project_version() + '"', language: '
 subdir('src')
 subdir('docs')
 subdir('tests')
+
+install_data('LICENSE', install_dir: get_option('datadir') / 'licenses' / 'rawwin')
+install_data('README.md', 'NEWS.md', 'PROVENANCE.md',
+             install_dir: get_option('datadir') / 'doc' / 'rawwin')
