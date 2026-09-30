@@ -167,48 +167,24 @@ run_command(char *const argv[])
 }
 
 static int
-hex_value(unsigned char c)
+projected_xid_valid(const char *text)
 {
-  if (c >= '0' && c <= '9') return c - '0';
-  if (c >= 'a' && c <= 'f') return c - 'a' + 10;
-  if (c >= 'A' && c <= 'F') return c - 'A' + 10;
-  return -1;
-}
+  char *end = NULL;
+  unsigned long value;
 
-static char *
-display_text(const char *text)
-{
-  size_t i, length = strlen(text), used = 0;
-  char *result = malloc(length + 1u);
-
-  if (!result)
-    return NULL;
-  for (i = 0; i < length; ++i)
-  {
-    unsigned char c = (unsigned char)text[i];
-    if (c == '%' && i + 2u < length)
-    {
-      int hi = hex_value((unsigned char)text[i + 1u]);
-      int lo = hex_value((unsigned char)text[i + 2u]);
-      if (hi >= 0 && lo >= 0)
-      {
-        c = (unsigned char)((hi << 4) | lo);
-        i += 2u;
-      }
-    }
-    if (c < 0x20u || c == 0x7fu)
-      c = ' ';
-    result[used++] = (char)c;
-  }
-  result[used] = '\0';
-  return result;
+  if (!text || text[0] != '0' || text[1] != 'x' || !text[2] ||
+      text[2] == '+' || text[2] == '-')
+    return 0;
+  errno = 0;
+  value = strtoul(text + 2, &end, 16);
+  return !errno && end && end != text + 2 && !*end && value != 0 &&
+         value <= UINT32_MAX;
 }
 
 static int
 build_menu(const char *snapshot, FILE *menu, size_t *client_count)
 {
   char *copy, *line, *next;
-  int first = 1;
   size_t count_clients = 0;
 
   *client_count = 0;
@@ -222,22 +198,11 @@ build_menu(const char *snapshot, FILE *menu, size_t *client_count)
     if (endline) { *endline = '\0'; next = endline + 1; }
     else next = NULL;
 
-    if (first)
+    if (*line)
     {
-      if (strcmp(line, "rawm-clients-v1"))
-      {
-        fputs("rawwin: unsupported or malformed rawm client inventory\n", stderr);
-        free(copy);
-        return -1;
-      }
-      first = 0;
-    }
-    else if (*line)
-    {
-      char *fields[8];
+      char *fields[3];
       size_t fields_count = 0;
       char *p = line;
-      char *class_name, *title;
 
       fields[fields_count++] = p;
       while (*p)
@@ -247,6 +212,7 @@ build_menu(const char *snapshot, FILE *menu, size_t *client_count)
           *p = '\0';
           if (fields_count >= sizeof(fields) / sizeof(fields[0]))
           {
+            fputs("rawwin: malformed rawctl client list\n", stderr);
             free(copy);
             return -1;
           }
@@ -254,36 +220,23 @@ build_menu(const char *snapshot, FILE *menu, size_t *client_count)
         }
         ++p;
       }
-      if (fields_count != 8 || strcmp(fields[0], "client"))
+      if (fields_count != 3 || !projected_xid_valid(fields[0]))
       {
-        fputs("rawwin: malformed rawm client inventory\n", stderr);
+        fputs("rawwin: malformed rawctl client list\n", stderr);
         free(copy);
         return -1;
       }
-      class_name = display_text(fields[6]);
-      title = display_text(fields[7]);
-      if (!class_name || !title)
+      if (fprintf(menu, "%s  %s - %s\n", fields[0], fields[1], fields[2]) < 0)
       {
-        free(class_name);
-        free(title);
         free(copy);
         return -1;
       }
-      if (fprintf(menu, "%s  %s - %s\n", fields[1], class_name, title) < 0)
-      {
-        free(class_name);
-        free(title);
-        free(copy);
-        return -1;
-      }
-      free(class_name);
-      free(title);
       ++count_clients;
     }
     line = next;
   }
   free(copy);
-  if (first || fflush(menu) != 0)
+  if (fflush(menu) != 0)
     return -1;
   *client_count = count_clients;
   return 0;
@@ -316,7 +269,7 @@ selection_xid(const char *selection, char *xid, size_t capacity)
 int
 main(int argc, char **argv)
 {
-  char *clients_argv[] = {"rawctl", "clients", NULL};
+  char *clients_argv[] = {"rawctl", "client-list", NULL};
   char *menu_argv[] = {"rawmenu", "-M", "select", "-p", "Window:", NULL};
   Buffer clients = {0}, selection = {0};
   FILE *menu = NULL;

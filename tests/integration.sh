@@ -17,11 +17,10 @@ cat >"$tmp/bin/rawctl" <<'EOS'
 #!/bin/sh
 set -eu
 case ${1-} in
-clients)
+client-list)
   cat <<'EOC'
-rawm-clients-v1
-client	0x101	0	00000001	1	1	AlphaClass	Alpha%25desk
-client	0x202	0	00000002	0	0	BetaClass	Beta%09desk
+0x101	AlphaClass	Alpha%desk
+0x202	BetaClass	Beta desk
 EOC
   ;;
 focus-client)
@@ -54,9 +53,9 @@ export RAWWIN_MENU_INPUT="$tmp/menu-input"
 "$rawwin"
 [ "$(cat "$tmp/focus")" = 0x202 ] || fail "selected client was not focused"
 grep -qx '0x101  AlphaClass - Alpha%desk' "$tmp/menu-input" ||
-  fail "percent escape was not decoded"
+  fail "projected percent text was not preserved"
 grep -qx '0x202  BetaClass - Beta desk' "$tmp/menu-input" ||
-  fail "tab escape was not sanitized"
+  fail "projected title was not preserved"
 
 : >"$tmp/focus"
 RAWWIN_MENU_SELECT=0x101 "$rawwin"
@@ -78,7 +77,7 @@ cat >"$tmp/bin/rawctl" <<'EOS'
 #!/bin/sh
 set -eu
 case ${1-} in
-clients) printf '%s\n' 'rawm-clients-v1' ;;
+client-list) : ;;
 *) exit 64 ;;
 esac
 EOS
